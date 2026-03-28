@@ -98,6 +98,7 @@ window.addEventListener('keydown', function(e) {
   keys[e.code] = true;
   // Prevent arrow keys scrolling the PS5 browser
   if (e.code.indexOf('Arrow') === 0) e.preventDefault();
+  if (e.code === 'KeyR' && (gameIsOver || gameWon)) restartGame();
 });
 window.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
@@ -319,6 +320,76 @@ function tryAttack(dt) {
     performAttack();
   }
   prevAttackInput = attacking;
+}
+
+// ─── Wave management ──────────────────────────────────────────────────────────
+function showWaveClear(msg) {
+  var el      = document.getElementById('wave-clear');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  setTimeout(function() { el.style.opacity = '0'; }, 1500);
+}
+
+function completeWave() {
+  waveActive   = false;
+  betweenWaves = true;
+  betweenTimer = 0;
+
+  if (waveNum >= 5) {
+    showWaveClear('You Win!');
+    setTimeout(triggerWin, 1500);
+  } else {
+    showWaveClear('Wave Clear!');
+    document.getElementById('health-fill').classList.add('regen');
+  }
+}
+
+function updateBetweenWaves(dt) {
+  if (!betweenWaves || gameIsOver || gameWon) return;
+  betweenTimer  += dt;
+  playerHealth   = Math.min(playerMaxHealth, playerHealth + 25 * dt);
+  if (betweenTimer >= 3) {
+    betweenWaves = false;
+    startWave(waveNum + 1);
+  }
+}
+
+function triggerGameOver() {
+  gameIsOver = true;
+  document.getElementById('overlay-title').textContent = 'Game Over';
+  document.getElementById('overlay-sub').textContent   =
+    'Reached Wave ' + waveNum + ' · ' + killCount + ' total kills';
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function triggerWin() {
+  gameWon = true;
+  document.getElementById('overlay-title').textContent = 'You Win!';
+  document.getElementById('overlay-sub').textContent   = 'All 5 waves cleared!';
+  document.getElementById('overlay').style.display     = 'flex';
+}
+
+function restartGame() {
+  playerHealth    = playerMaxHealth;
+  attackCooldown  = 0;
+  isAttacking     = false;
+  attackSquashTimer = 0;
+  capsule.scale.x = 1.0;
+  gameIsOver      = false;
+  gameWon         = false;
+  prevAttackInput = false;
+
+  for (var i = 0; i < enemies.length; i++) { scene.remove(enemies[i].mesh); }
+  enemies = [];
+
+  capsule.position.set(0, 1.0, 0);
+  capsule.rotation.y = 0;
+
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('vignette').classList.remove('damaged');
+  document.getElementById('health-fill').classList.remove('regen');
+
+  startWave(1);
 }
 
 function loop() {
