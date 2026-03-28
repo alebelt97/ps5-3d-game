@@ -1,55 +1,63 @@
 // ─── Renderer ────────────────────────────────────────────────────────────────
-const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(devicePixelRatio);
-renderer.setSize(innerWidth, innerHeight);
+var canvas = document.getElementById('c');
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
-const scene = new THREE.Scene();
+var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
 scene.fog = new THREE.Fog(0x1a1a2e, 30, 80);
 
 // ─── Lighting ─────────────────────────────────────────────────────────────────
-const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-scene.add(ambient);
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
-const dirLight = new THREE.DirectionalLight(0xffd580, 1.2);
+var dirLight = new THREE.DirectionalLight(0xffd580, 1.2);
 dirLight.position.set(10, 20, 10);
 dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.width  = 1024;
 dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.near = 0.5;
-dirLight.shadow.camera.far = 100;
-dirLight.shadow.camera.left = -30;
-dirLight.shadow.camera.right = 30;
-dirLight.shadow.camera.top = 30;
+dirLight.shadow.camera.near   = 0.5;
+dirLight.shadow.camera.far    = 100;
+dirLight.shadow.camera.left   = -30;
+dirLight.shadow.camera.right  =  30;
+dirLight.shadow.camera.top    =  30;
 dirLight.shadow.camera.bottom = -30;
 scene.add(dirLight);
 
 // ─── Ground ───────────────────────────────────────────────────────────────────
-const ground = new THREE.Mesh(
+var ground = new THREE.Mesh(
   new THREE.PlaneGeometry(200, 200),
   new THREE.MeshLambertMaterial({ color: 0x16213e })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+scene.add(new THREE.GridHelper(200, 40, 0x334466, 0x223355));
 
-const grid = new THREE.GridHelper(200, 40, 0x334466, 0x223355);
-scene.add(grid);
+// ─── Character ───────────────────────────────────────────────────────────────
+// CapsuleGeometry is Three.js r143+; build a capsule from primitives for
+// compatibility with the PS5 browser's older WebKit engine.
+var capsuleMat = new THREE.MeshLambertMaterial({ color: 0xff6b35 });
+var capsule = new THREE.Group();
 
-// ─── Character (capsule) ─────────────────────────────────────────────────────
-const capsule = new THREE.Mesh(
-  new THREE.CapsuleGeometry(0.4, 0.8, 4, 8),
-  new THREE.MeshLambertMaterial({ color: 0xff6b35 })
-);
-capsule.position.y = 1.0;
-capsule.castShadow = true;
-scene.add(capsule);
+var body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 12), capsuleMat);
+body.castShadow = true;
+capsule.add(body);
 
-// Small direction indicator (nose) so rotation is obvious
-const nose = new THREE.Mesh(
+var capTop = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
+capTop.position.y = 0.4;
+capTop.castShadow = true;
+capsule.add(capTop);
+
+var capBot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
+capBot.position.y = -0.4;
+capBot.castShadow = true;
+capsule.add(capBot);
+
+// White cone "nose" — shows which way the character faces
+var nose = new THREE.Mesh(
   new THREE.ConeGeometry(0.15, 0.4, 6),
   new THREE.MeshLambertMaterial({ color: 0xffffff })
 );
@@ -57,85 +65,94 @@ nose.position.set(0, 0.2, -0.55);
 nose.rotation.x = Math.PI / 2;
 capsule.add(nose);
 
+capsule.position.y = 1.0;
+scene.add(capsule);
+
 // ─── Camera ───────────────────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
-const CAM_OFFSET = new THREE.Vector3(0, 3, 7);
-let cameraYaw = 0; // radians
+var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+var CAM_DIST_X = 0;
+var CAM_DIST_Y = 3;
+var CAM_DIST_Z = 7;
+var cameraYaw = 0;
 
 function updateCamera() {
-  const offset = CAM_OFFSET.clone()
-    .applyEuler(new THREE.Euler(0, cameraYaw, 0));
-  camera.position.copy(capsule.position).add(offset);
+  var cos = Math.cos(cameraYaw);
+  var sin = Math.sin(cameraYaw);
+  camera.position.x = capsule.position.x + CAM_DIST_X * cos + CAM_DIST_Z * sin;
+  camera.position.y = capsule.position.y + CAM_DIST_Y;
+  camera.position.z = capsule.position.z - CAM_DIST_X * sin + CAM_DIST_Z * cos;
   camera.lookAt(capsule.position.x, capsule.position.y + 1, capsule.position.z);
 }
 
 // ─── Keyboard input ───────────────────────────────────────────────────────────
-const keys = {};
-window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
-window.addEventListener('keyup',   e => { keys[e.code] = false; });
+var keys = {};
+window.addEventListener('keydown', function(e) {
+  keys[e.code] = true;
+  // Prevent arrow keys scrolling the PS5 browser
+  if (e.code.indexOf('Arrow') === 0) e.preventDefault();
+});
+window.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
 // ─── Gamepad input ────────────────────────────────────────────────────────────
-const DEAD = 0.12;
-let gpAxes = [0, 0, 0, 0];
+var DEAD = 0.12;
+var gpAxes = [0, 0, 0, 0];
 
 function pollGamepad() {
-  const gp = navigator.getGamepads
-    ? [...navigator.getGamepads()].find(g => g)
-    : null;
-  if (gp) {
-    gpAxes = Array.from(gp.axes).slice(0, 4).map(a => Math.abs(a) > DEAD ? a : 0);
+  var gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  var gp = null;
+  for (var i = 0; i < gamepads.length; i++) {
+    if (gamepads[i]) { gp = gamepads[i]; break; }
+  }
+  if (gp && gp.axes) {
+    for (var j = 0; j < 4; j++) {
+      var a = gp.axes[j] || 0;
+      gpAxes[j] = Math.abs(a) > DEAD ? a : 0;
+    }
   }
 }
 
-window.addEventListener('gamepadconnected', e => {
-  console.log('Gamepad connected:', e.gamepad.id);
+window.addEventListener('gamepadconnected', function(e) {
+  console.log('Gamepad connected: ' + e.gamepad.id);
 });
 
 // ─── Game loop ────────────────────────────────────────────────────────────────
-const SPEED     = 5;   // units/sec
-const CAM_SPEED = 2;   // radians/sec
-
-let prevTime = performance.now();
+var SPEED     = 5;   // units/sec
+var CAM_SPEED = 2;   // radians/sec
+var prevTime  = Date.now();
 
 function loop() {
   requestAnimationFrame(loop);
 
-  const now = performance.now();
-  const dt  = Math.min((now - prevTime) / 1000, 0.05);
-  prevTime  = now;
+  var now = Date.now();
+  var dt  = Math.min((now - prevTime) / 1000, 0.05);
+  prevTime = now;
 
   pollGamepad();
 
-  // ── Camera yaw: right stick X or arrow keys ──────────────────────────────
-  let yawDelta = gpAxes[2];
+  // Camera yaw: right stick X or arrow keys
+  var yawDelta = gpAxes[2];
   if (keys['ArrowLeft'])  yawDelta -= 1;
   if (keys['ArrowRight']) yawDelta += 1;
   cameraYaw -= yawDelta * CAM_SPEED * dt;
 
-  // ── Movement: left stick or WASD ─────────────────────────────────────────
-  // Note: arrow keys only rotate camera (no strafe conflict on keyboard)
-  let mx = gpAxes[0];
-  let mz = gpAxes[1];
+  // Movement: left stick or WASD
+  var mx = gpAxes[0];
+  var mz = gpAxes[1];
   if (keys['KeyA']) mx -= 1;
   if (keys['KeyD']) mx += 1;
   if (keys['KeyW']) mz -= 1;
   if (keys['KeyS']) mz += 1;
 
   if (mx !== 0 || mz !== 0) {
-    const len = Math.hypot(mx, mz);
-    const nx  = mx / len;
-    const nz  = mz / len;
-
-    // Rotate move vector by cameraYaw so forward = camera-forward
-    const cos = Math.cos(cameraYaw);
-    const sin = Math.sin(cameraYaw);
-    const wx  =  nx * cos + nz * sin;
-    const wz  = -nx * sin + nz * cos;
-
+    var len = Math.sqrt(mx * mx + mz * mz);
+    var nx  = mx / len;
+    var nz  = mz / len;
+    var cos = Math.cos(cameraYaw);
+    var sin = Math.sin(cameraYaw);
+    var wx  =  nx * cos + nz * sin;
+    var wz  = -nx * sin + nz * cos;
     capsule.position.x += wx * SPEED * dt;
     capsule.position.z += wz * SPEED * dt;
-
-    // Face character toward movement direction
     capsule.rotation.y = Math.atan2(wx, wz);
   }
 
@@ -144,10 +161,10 @@ function loop() {
 }
 
 // ─── Resize ───────────────────────────────────────────────────────────────────
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
+window.addEventListener('resize', function() {
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
