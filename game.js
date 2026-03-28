@@ -1,13 +1,30 @@
 // ─── Renderer ────────────────────────────────────────────────────────────────
 var canvas = document.getElementById('c');
-// PS5 browser supports WebGL1 only — get the context explicitly so Three.js
-// doesn't attempt a WebGL2 context (which fails silently on PS5).
-var gl = canvas.getContext('webgl', { antialias: true })
-      || canvas.getContext('experimental-webgl', { antialias: true });
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+// PS5 needs failIfMajorPerformanceCaveat:false or it refuses to create a context.
+// antialias:false lowers the bar further. No shadows — they need depth-texture
+// extensions that may be absent.
+var ctxOpts = { antialias: false, failIfMajorPerformanceCaveat: false,
+                alpha: false, depth: true, stencil: false };
+var gl = canvas.getContext('webgl', ctxOpts)
+      || canvas.getContext('experimental-webgl', ctxOpts);
+
+// Show debug info on screen for a few seconds so we can tell what happened
+(function() {
+  var dbg = document.getElementById('dbg');
+  if (dbg) {
+    dbg.style.display = 'block';
+    dbg.textContent = gl ? 'WebGL OK (' + (gl.constructor && gl.constructor.name || 'ctx') + ')' : 'WebGL context is null';
+    setTimeout(function() { dbg.style.display = 'none'; }, 5000);
+  }
+}());
+
+if (!gl) { throw new Error('WebGL not available'); }
+
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
+renderer.setPixelRatio(1); // fixed 1:1 — PS5 doesn't need HiDPI scaling
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = false; // shadows need extensions PS5 may lack
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
 var scene = new THREE.Scene();
@@ -19,15 +36,6 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
 var dirLight = new THREE.DirectionalLight(0xffd580, 1.2);
 dirLight.position.set(10, 20, 10);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width  = 1024;
-dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.near   = 0.5;
-dirLight.shadow.camera.far    = 100;
-dirLight.shadow.camera.left   = -30;
-dirLight.shadow.camera.right  =  30;
-dirLight.shadow.camera.top    =  30;
-dirLight.shadow.camera.bottom = -30;
 scene.add(dirLight);
 
 // ─── Ground ───────────────────────────────────────────────────────────────────
@@ -36,7 +44,6 @@ var ground = new THREE.Mesh(
   new THREE.MeshLambertMaterial({ color: 0x16213e })
 );
 ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
 scene.add(ground);
 scene.add(new THREE.GridHelper(200, 40, 0x334466, 0x223355));
 
@@ -47,17 +54,14 @@ var capsuleMat = new THREE.MeshLambertMaterial({ color: 0xff6b35 });
 var capsule = new THREE.Group();
 
 var body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 12), capsuleMat);
-body.castShadow = true;
 capsule.add(body);
 
 var capTop = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
 capTop.position.y = 0.4;
-capTop.castShadow = true;
 capsule.add(capTop);
 
 var capBot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
 capBot.position.y = -0.4;
-capBot.castShadow = true;
 capsule.add(capBot);
 
 // White cone "nose" — shows which way the character faces
