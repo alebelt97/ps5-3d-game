@@ -128,6 +128,32 @@ var SPEED     = 5;   // units/sec
 var CAM_SPEED = 2;   // radians/sec
 var prevTime  = Date.now();
 
+// ─── Combat state ─────────────────────────────────────────────────────────────
+var playerHealth    = 100;
+var playerMaxHealth = 100;
+var attackCooldown  = 0;       // seconds remaining until attack is ready
+var ATTACK_CD       = 0.6;     // total cooldown duration
+var COOLDOWN_CIRC   = 100.53;  // SVG circle circumference (2π×16)
+var isAttacking     = false;
+var attackSquashTimer = 0;
+
+var enemies = [];
+
+var waveNum      = 1;
+var killCount    = 0;
+var killTarget   = 6;
+var waveActive   = false;
+var betweenWaves = false;
+var betweenTimer = 0;
+var spawnQueue   = 0;
+var spawnTimer   = 0;
+var gameIsOver   = false;
+var gameWon      = false;
+
+var WAVE_SIZES = [0, 6, 8, 11, 14, 18]; // index 0 unused; wave 1–5
+
+var prevAttackInput = false;
+
 function loop() {
   requestAnimationFrame(loop);
 
