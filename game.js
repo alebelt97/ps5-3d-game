@@ -1,6 +1,10 @@
 // ─── Renderer ────────────────────────────────────────────────────────────────
 var canvas = document.getElementById('c');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+// PS5 browser supports WebGL1 only — get the context explicitly so Three.js
+// doesn't attempt a WebGL2 context (which fails silently on PS5).
+var gl = canvas.getContext('webgl', { antialias: true })
+      || canvas.getContext('experimental-webgl', { antialias: true });
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
