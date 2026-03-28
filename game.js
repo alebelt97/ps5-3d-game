@@ -395,6 +395,22 @@ function restartGame() {
   startWave(1);
 }
 
+// ─── HUD updater ──────────────────────────────────────────────────────────────
+function updateHUD() {
+  // Health bar width
+  var pct = Math.max(0, playerHealth / playerMaxHealth * 100);
+  document.getElementById('health-fill').style.width = pct + '%';
+
+  // Wave / kill counter
+  document.getElementById('wave-info').textContent =
+    'Wave ' + waveNum + ' · ' + killCount + '/' + killTarget;
+
+  // Cooldown arc: offset 0 = full arc (ready), offset = CIRC = empty (on cooldown)
+  var cdFraction = attackCooldown / ATTACK_CD; // 0=ready, 1=just used
+  document.getElementById('cooldown-circle').style.strokeDashoffset =
+    cdFraction * COOLDOWN_CIRC;
+}
+
 function loop() {
   requestAnimationFrame(loop);
 
@@ -402,35 +418,52 @@ function loop() {
   var dt  = Math.min((now - prevTime) / 1000, 0.05);
   prevTime = now;
 
-  pollGamepad();
+  if (!gameIsOver && !gameWon) {
+    pollGamepad();
 
-  // Camera yaw: right stick X or arrow keys
-  var yawDelta = gpAxes[2];
-  if (keys['ArrowLeft'])  yawDelta -= 1;
-  if (keys['ArrowRight']) yawDelta += 1;
-  cameraYaw -= yawDelta * CAM_SPEED * dt;
+    // Camera yaw: right stick X or arrow keys
+    var yawDelta = gpAxes[2];
+    if (keys['ArrowLeft'])  yawDelta -= 1;
+    if (keys['ArrowRight']) yawDelta += 1;
+    cameraYaw -= yawDelta * CAM_SPEED * dt;
 
-  // Movement: left stick or WASD
-  var mx = gpAxes[0];
-  var mz = gpAxes[1];
-  if (keys['KeyA']) mx -= 1;
-  if (keys['KeyD']) mx += 1;
-  if (keys['KeyW']) mz -= 1;
-  if (keys['KeyS']) mz += 1;
+    // Movement: left stick or WASD
+    var mx = gpAxes[0];
+    var mz = gpAxes[1];
+    if (keys['KeyA']) mx -= 1;
+    if (keys['KeyD']) mx += 1;
+    if (keys['KeyW']) mz -= 1;
+    if (keys['KeyS']) mz += 1;
 
-  if (mx !== 0 || mz !== 0) {
-    var len = Math.sqrt(mx * mx + mz * mz);
-    var nx  = mx / len;
-    var nz  = mz / len;
-    var cos = Math.cos(cameraYaw);
-    var sin = Math.sin(cameraYaw);
-    var wx  =  nx * cos + nz * sin;
-    var wz  = -nx * sin + nz * cos;
-    capsule.position.x += wx * SPEED * dt;
-    capsule.position.z += wz * SPEED * dt;
-    capsule.rotation.y = Math.atan2(wx, wz);
+    if (mx !== 0 || mz !== 0) {
+      var len = Math.sqrt(mx * mx + mz * mz);
+      var nx  = mx / len;
+      var nz  = mz / len;
+      var cos = Math.cos(cameraYaw);
+      var sin = Math.sin(cameraYaw);
+      var wx  =  nx * cos + nz * sin;
+      var wz  = -nx * sin + nz * cos;
+      capsule.position.x += wx * SPEED * dt;
+      capsule.position.z += wz * SPEED * dt;
+      capsule.rotation.y  = Math.atan2(wx, wz);
+    }
+
+    tryAttack(dt);
+    updateSpawn(dt);
+    updateEnemies(dt);
+    updateBetweenWaves(dt);
+  } else {
+    // While overlay is visible, still allow Options button restart on gamepad
+    pollGamepad();
+    var gp2 = null;
+    var gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (var gi = 0; gi < gps.length; gi++) { if (gps[gi]) { gp2 = gps[gi]; break; } }
+    if (gp2 && gp2.buttons && gp2.buttons[9] && gp2.buttons[9].pressed) {
+      restartGame();
+    }
   }
 
+  updateHUD();
   updateCamera();
   renderer.render(scene, camera);
 }
@@ -444,4 +477,5 @@ window.addEventListener('resize', function() {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 updateCamera();
+startWave(1);
 loop();
