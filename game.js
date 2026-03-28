@@ -322,6 +322,26 @@ function updateEnemies(dt) {
 }
 
 // ─── Attack system ────────────────────────────────────────────────────────────
+function spawnAttackRing(hx, hz) {
+  var mat  = new THREE.MeshBasicMaterial({ color: 0xffdd44, transparent: true, opacity: 0.8 });
+  var geo  = new THREE.TorusGeometry(1, 0.10, 6, 20);
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(hx, 0.08, hz);
+  mesh.rotation.x = -Math.PI / 2; // lay flat on ground
+  scene.add(mesh);
+  var start = Date.now();
+  var dur   = 220;
+  function animateRing() {
+    var t = Math.min((Date.now() - start) / dur, 1);
+    var s = 2.5 * t + 0.1; // expand from tiny → 2.5× (matches HIT_R)
+    mesh.scale.set(s, s, s);
+    mat.opacity = 0.8 * (1 - t);
+    if (t < 1) { requestAnimationFrame(animateRing); }
+    else        { scene.remove(mesh); mat.dispose(); geo.dispose(); }
+  }
+  requestAnimationFrame(animateRing);
+}
+
 function flashEnemy(e) {
   var origColors = [];
   for (var i = 0; i < e.mats.length; i++) {
@@ -379,6 +399,8 @@ function performAttack() {
   var hx   = capsule.position.x + fwdX * 1.5;
   var hz   = capsule.position.z + fwdZ * 1.5;
   var HIT_R = 2.5;
+
+  spawnAttackRing(hx, hz);
 
   for (var i = 0; i < enemies.length; i++) {
     var e = enemies[i];
