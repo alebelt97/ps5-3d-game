@@ -38,31 +38,44 @@ ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 scene.add(new THREE.GridHelper(200, 40, 0x334466, 0x223355));
 
-// ─── Character ───────────────────────────────────────────────────────────────
-// CapsuleGeometry is Three.js r143+; build a capsule from primitives for
-// compatibility with the PS5 browser's older WebKit engine.
-var capsuleMat = new THREE.MeshLambertMaterial({ color: 0xff6b35 });
+// ─── Character (Mario) ───────────────────────────────────────────────────────
+// Built from primitives — faces local -Z direction. Group rotates with movement.
 var capsule = new THREE.Group();
 
-var body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 12), capsuleMat);
-capsule.add(body);
+// Legs (dark brown boots/trousers)
+var legMat = new THREE.MeshLambertMaterial({ color: 0x4a2800 });
+var legL = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
+legL.position.set(-0.14, -0.80, 0);
+capsule.add(legL);
+var legR = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
+legR.position.set(0.14, -0.80, 0);
+capsule.add(legR);
 
-var capTop = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
-capTop.position.y = 0.4;
-capsule.add(capTop);
+// Torso — blue overalls
+var torsoMat = new THREE.MeshLambertMaterial({ color: 0x1155cc });
+var torso = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.48, 10), torsoMat);
+torso.position.set(0, -0.36, 0);
+capsule.add(torso);
 
-var capBot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capsuleMat);
-capBot.position.y = -0.4;
-capsule.add(capBot);
+// Overalls bib — small box on front of torso
+var bib = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.20, 0.10), torsoMat);
+bib.position.set(0, -0.14, -0.25);
+capsule.add(bib);
 
-// White cone "nose" — shows which way the character faces
-var nose = new THREE.Mesh(
-  new THREE.ConeGeometry(0.15, 0.4, 6),
-  new THREE.MeshLambertMaterial({ color: 0xffffff })
-);
-nose.position.set(0, 0.2, -0.55);
-nose.rotation.x = Math.PI / 2;
-capsule.add(nose);
+// Head — skin colour
+var headMat = new THREE.MeshLambertMaterial({ color: 0xffcc99 });
+var head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), headMat);
+head.position.set(0, 0.33, 0);
+capsule.add(head);
+
+// Hat — red brim + tapered dome
+var hatMat = new THREE.MeshLambertMaterial({ color: 0xcc1111 });
+var hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 12), hatMat);
+hatBrim.position.set(0, 0.71, 0);
+capsule.add(hatBrim);
+var hatDome = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.28, 0.32, 10), hatMat);
+hatDome.position.set(0, 0.90, 0);
+capsule.add(hatDome);
 
 capsule.position.y = 1.0;
 scene.add(capsule);
@@ -149,18 +162,98 @@ var prevOptionsInput = false;
 
 // ─── Enemy system ─────────────────────────────────────────────────────────────
 function makeEnemy(type) {
-  var mat, mesh;
+  var group = new THREE.Group();
+  var mats  = [];
+
   if (type === 'scout') {
-    mat  = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
-    mesh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), mat);
+    // Goomba — round brown mushroom creature with angry brows and feet
+    var footMatL = new THREE.MeshLambertMaterial({ color: 0x5c2d0a });
+    var footMatR = new THREE.MeshLambertMaterial({ color: 0x5c2d0a });
+    var bodyMat  = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+    mats = [bodyMat, footMatL, footMatR];
+
+    var gFootL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatL);
+    gFootL.position.set(-0.15, -0.41, 0);
+    group.add(gFootL);
+
+    var gFootR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatR);
+    gFootR.position.set(0.15, -0.41, 0);
+    group.add(gFootR);
+
+    var gBody = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), bodyMat);
+    gBody.position.set(0, 0.10, 0);
+    group.add(gBody);
+
+    // Eyes (white + pupils) — face -Z; not in mats (fixed colour)
+    var eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    var pupilMat    = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    var eyeWL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), eyeWhiteMat);
+    eyeWL.position.set(-0.14, 0.18, -0.37);
+    group.add(eyeWL);
+    var eyeWR = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), eyeWhiteMat);
+    eyeWR.position.set(0.14, 0.18, -0.37);
+    group.add(eyeWR);
+    var pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 5), pupilMat);
+    pupilL.position.set(-0.14, 0.17, -0.43);
+    group.add(pupilL);
+    var pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 5), pupilMat);
+    pupilR.position.set(0.14, 0.17, -0.43);
+    group.add(pupilR);
+
+    // Angry brows — angled inward
+    var browMat = new THREE.MeshLambertMaterial({ color: 0x3a1a00 });
+    var browL = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.05, 0.05), browMat);
+    browL.position.set(-0.14, 0.30, -0.35);
+    browL.rotation.z = 0.35;
+    group.add(browL);
+    var browR = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.05, 0.05), browMat);
+    browR.position.set(0.14, 0.30, -0.35);
+    browR.rotation.z = -0.35;
+    group.add(browR);
+
   } else {
-    mat  = new THREE.MeshLambertMaterial({ color: 0xcc2222 });
-    mesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mat);
+    // Koopa — green shell creature with yellow legs and head
+    var kLegMatL   = new THREE.MeshLambertMaterial({ color: 0xffe066 });
+    var kLegMatR   = new THREE.MeshLambertMaterial({ color: 0xffe066 });
+    var shellBMat  = new THREE.MeshLambertMaterial({ color: 0x228833 });
+    var shellDMat  = new THREE.MeshLambertMaterial({ color: 0x33aa44 });
+    var kHeadMat   = new THREE.MeshLambertMaterial({ color: 0xffe066 });
+    mats = [kLegMatL, kLegMatR, shellBMat, shellDMat, kHeadMat];
+
+    var kLegL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatL);
+    kLegL.position.set(-0.18, -0.39, 0);
+    group.add(kLegL);
+
+    var kLegR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatR);
+    kLegR.position.set(0.18, -0.39, 0);
+    group.add(kLegR);
+
+    var shellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.30, 12), shellBMat);
+    shellBase.position.set(0, -0.13, 0);
+    group.add(shellBase);
+
+    var shellDome = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 7), shellDMat);
+    shellDome.position.set(0, 0.02, 0);
+    group.add(shellDome);
+
+    var kHead = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), kHeadMat);
+    kHead.position.set(0, 0.62, 0);
+    group.add(kHead);
+
+    // Eyes — not in mats
+    var kEyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    var kEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 7, 5), kEyeMat);
+    kEyeL.position.set(-0.10, 0.66, -0.18);
+    group.add(kEyeL);
+    var kEyeR = new THREE.Mesh(new THREE.SphereGeometry(0.07, 7, 5), kEyeMat);
+    kEyeR.position.set(0.10, 0.66, -0.18);
+    group.add(kEyeR);
   }
+
   var angle = Math.random() * Math.PI * 2;
-  mesh.position.set(Math.cos(angle) * 40, 0.5, Math.sin(angle) * 40);
-  scene.add(mesh);
-  return { type: type, mesh: mesh, health: type === 'scout' ? 1 : 2, aiState: 'seek', dead: false };
+  group.position.set(Math.cos(angle) * 40, 0.5, Math.sin(angle) * 40);
+  scene.add(group);
+  return { type: type, mesh: group, mats: mats, health: type === 'scout' ? 1 : 2, aiState: 'seek', dead: false, shrinking: false };
 }
 
 function updateSpawn(dt) {
@@ -230,10 +323,17 @@ function updateEnemies(dt) {
 
 // ─── Attack system ────────────────────────────────────────────────────────────
 function flashEnemy(e) {
-  var origHex = e.type === 'scout' ? 0xff8c00 : 0xcc2222;
-  e.mesh.material.color.setHex(0xffffff);
+  var origColors = [];
+  for (var i = 0; i < e.mats.length; i++) {
+    origColors.push(e.mats[i].color.getHex());
+    e.mats[i].color.setHex(0xffffff);
+  }
   setTimeout(function() {
-    if (!e.dead) e.mesh.material.color.setHex(origHex);
+    if (!e.dead) {
+      for (var i = 0; i < e.mats.length; i++) {
+        e.mats[i].color.setHex(origColors[i]);
+      }
+    }
   }, 80);
 }
 
