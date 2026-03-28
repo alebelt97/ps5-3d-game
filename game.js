@@ -42,13 +42,19 @@ scene.add(new THREE.GridHelper(200, 40, 0x334466, 0x223355));
 // Built from primitives — faces local -Z direction. Group rotates with movement.
 var capsule = new THREE.Group();
 
-// Legs (dark brown boots/trousers)
+// Legs (dark brown boots/trousers) — pivot group at hip so full leg swings
 var legMat = new THREE.MeshLambertMaterial({ color: 0x4a2800 });
-var legL = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
-legL.position.set(-0.14, -0.80, 0);
+var legL = new THREE.Group();
+legL.position.set(-0.14, -0.60, 0);
+var legLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
+legLMesh.position.set(0, -0.20, 0);
+legL.add(legLMesh);
 capsule.add(legL);
-var legR = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
-legR.position.set(0.14, -0.80, 0);
+var legR = new THREE.Group();
+legR.position.set(0.14, -0.60, 0);
+var legRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.40, 8), legMat);
+legRMesh.position.set(0, -0.20, 0);
+legR.add(legRMesh);
 capsule.add(legR);
 
 // Torso — blue overalls
@@ -176,12 +182,18 @@ function makeEnemy(type) {
     var bodyMat  = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
     mats = [bodyMat, footMatL, footMatR];
 
-    var gFootL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatL);
-    gFootL.position.set(-0.15, -0.41, 0);
+    var gFootL = new THREE.Group();
+    gFootL.position.set(-0.15, -0.32, 0);
+    var gFootLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatL);
+    gFootLMesh.position.set(0, -0.09, 0);
+    gFootL.add(gFootLMesh);
     group.add(gFootL);
 
-    var gFootR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatR);
-    gFootR.position.set(0.15, -0.41, 0);
+    var gFootR = new THREE.Group();
+    gFootR.position.set(0.15, -0.32, 0);
+    var gFootRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatR);
+    gFootRMesh.position.set(0, -0.09, 0);
+    gFootR.add(gFootRMesh);
     group.add(gFootR);
     legs = [gFootL, gFootR];
 
@@ -225,12 +237,18 @@ function makeEnemy(type) {
     var kHeadMat   = new THREE.MeshLambertMaterial({ color: 0xffe066 });
     mats = [kLegMatL, kLegMatR, shellBMat, shellDMat, kHeadMat];
 
-    var kLegL = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatL);
-    kLegL.position.set(-0.18, -0.39, 0);
+    var kLegL = new THREE.Group();
+    kLegL.position.set(-0.18, -0.28, 0);
+    var kLegLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatL);
+    kLegLMesh.position.set(0, -0.11, 0);
+    kLegL.add(kLegLMesh);
     group.add(kLegL);
 
-    var kLegR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatR);
-    kLegR.position.set(0.18, -0.39, 0);
+    var kLegR = new THREE.Group();
+    kLegR.position.set(0.18, -0.28, 0);
+    var kLegRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatR);
+    kLegRMesh.position.set(0, -0.11, 0);
+    kLegR.add(kLegRMesh);
     group.add(kLegR);
     legs = [kLegL, kLegR];
 
@@ -318,7 +336,7 @@ function updateEnemies(dt) {
     // Leg walk animation
     if (e.legs.length) {
       var walkSpd  = e.type === 'scout' ? 11 : 7;
-      var swing    = Math.sin(totalTime * walkSpd + e.walkPhase) * 0.45;
+      var swing    = Math.sin(totalTime * walkSpd + e.walkPhase) * 0.65;
       e.legs[0].rotation.x =  swing;
       e.legs[1].rotation.x = -swing;
     }
@@ -588,7 +606,7 @@ function loop() {
     totalTime += dt;
     if (moving) {
       playerWalkTimer += dt;
-      var pSwing = Math.sin(playerWalkTimer * 9) * 0.45;
+      var pSwing = Math.sin(playerWalkTimer * 9) * 0.65;
       legL.rotation.x =  pSwing;
       legR.rotation.x = -pSwing;
     } else {
