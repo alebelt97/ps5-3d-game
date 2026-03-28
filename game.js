@@ -9,15 +9,6 @@ var ctxOpts = { antialias: false, failIfMajorPerformanceCaveat: false,
 var gl = canvas.getContext('webgl', ctxOpts)
       || canvas.getContext('experimental-webgl', ctxOpts);
 
-// Show debug info on screen for a few seconds so we can tell what happened
-(function() {
-  var dbg = document.getElementById('dbg');
-  if (dbg) {
-    dbg.style.display = 'block';
-    dbg.textContent = gl ? 'WebGL OK (' + (gl.constructor && gl.constructor.name || 'ctx') + ')' : 'WebGL context is null';
-    setTimeout(function() { dbg.style.display = 'none'; }, 5000);
-  }
-}());
 
 if (!gl) { throw new Error('WebGL not available'); }
 
@@ -153,7 +144,8 @@ var gameWon      = false;
 
 var WAVE_SIZES = [0, 6, 8, 11, 14, 18]; // index 0 unused; wave 1–5
 
-var prevAttackInput = false;
+var prevAttackInput  = false;
+var prevOptionsInput = false;
 
 // ─── Enemy system ─────────────────────────────────────────────────────────────
 function makeEnemy(type) {
@@ -189,7 +181,7 @@ function startWave(n) {
   waveActive   = true;
   betweenWaves = false;
   spawnQueue   = killTarget;
-  spawnTimer   = 0;
+  spawnTimer   = 0.5;
   document.getElementById('health-fill').classList.remove('regen');
 }
 
@@ -230,10 +222,9 @@ function updateEnemies(dt) {
     document.getElementById('vignette').classList.remove('damaged');
   }
 
-  // Clean up dead enemies — remove mesh from scene before dropping from array
+  // Clean up dead enemies — only drop from array once shrink animation is done
   enemies = enemies.filter(function(e) {
-    if (e.dead) { scene.remove(e.mesh); return false; }
-    return true;
+    return !(e.dead && !e.shrinking);
   });
 }
 
@@ -249,6 +240,7 @@ function flashEnemy(e) {
 function killEnemy(e) {
   if (e.dead) return;
   e.dead = true;
+  e.shrinking = true;
   var mesh      = e.mesh;
   var startTime = Date.now();
   var duration  = 150;
@@ -257,7 +249,7 @@ function killEnemy(e) {
     var s = 1 - t;
     mesh.scale.set(s, s, s);
     if (t < 1) { requestAnimationFrame(shrink); }
-    else        { scene.remove(mesh); }
+    else        { scene.remove(mesh); e.shrinking = false; }
   }
   requestAnimationFrame(shrink);
 
@@ -380,13 +372,15 @@ function restartGame() {
   capsule.scale.x = 1.0;
   gameIsOver      = false;
   gameWon         = false;
-  prevAttackInput = false;
+  prevAttackInput  = false;
+  prevOptionsInput = false;
 
   for (var i = 0; i < enemies.length; i++) { scene.remove(enemies[i].mesh); }
   enemies = [];
 
   capsule.position.set(0, 1.0, 0);
   capsule.rotation.y = 0;
+  cameraYaw = 0;
 
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('vignette').classList.remove('damaged');
@@ -458,9 +452,11 @@ function loop() {
     var gp2 = null;
     var gps = navigator.getGamepads ? navigator.getGamepads() : [];
     for (var gi = 0; gi < gps.length; gi++) { if (gps[gi]) { gp2 = gps[gi]; break; } }
-    if (gp2 && gp2.buttons && gp2.buttons[9] && gp2.buttons[9].pressed) {
+    var optionsNow = gp2 && gp2.buttons && gp2.buttons[9] && gp2.buttons[9].pressed;
+    if (optionsNow && !prevOptionsInput) {
       restartGame();
     }
+    prevOptionsInput = optionsNow;
   }
 
   updateHUD();
