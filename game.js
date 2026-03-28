@@ -154,6 +154,44 @@ var WAVE_SIZES = [0, 6, 8, 11, 14, 18]; // index 0 unused; wave 1–5
 
 var prevAttackInput = false;
 
+// ─── Enemy system ─────────────────────────────────────────────────────────────
+function makeEnemy(type) {
+  var mat, mesh;
+  if (type === 'scout') {
+    mat  = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), mat);
+  } else {
+    mat  = new THREE.MeshLambertMaterial({ color: 0xcc2222 });
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mat);
+  }
+  var angle = Math.random() * Math.PI * 2;
+  mesh.position.set(Math.cos(angle) * 40, 0.5, Math.sin(angle) * 40);
+  scene.add(mesh);
+  return { type: type, mesh: mesh, health: type === 'scout' ? 1 : 2, aiState: 'seek', dead: false };
+}
+
+function updateSpawn(dt) {
+  if (!waveActive || spawnQueue <= 0) return;
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    spawnTimer = 0.5;
+    var type = Math.random() < 0.6 ? 'scout' : 'tank';
+    enemies.push(makeEnemy(type));
+    spawnQueue--;
+  }
+}
+
+function startWave(n) {
+  waveNum      = n;
+  killCount    = 0;
+  killTarget   = WAVE_SIZES[n];
+  waveActive   = true;
+  betweenWaves = false;
+  spawnQueue   = killTarget;
+  spawnTimer   = 0;
+  document.getElementById('health-fill').classList.remove('regen');
+}
+
 function loop() {
   requestAnimationFrame(loop);
 
