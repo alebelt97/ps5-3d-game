@@ -229,8 +229,11 @@ function updateEnemies(dt) {
     document.getElementById('vignette').classList.remove('damaged');
   }
 
-  // Clean up dead enemies
-  enemies = enemies.filter(function(e) { return !e.dead; });
+  // Clean up dead enemies — remove mesh from scene before dropping from array
+  enemies = enemies.filter(function(e) {
+    if (e.dead) { scene.remove(e.mesh); return false; }
+    return true;
+  });
 }
 
 function loop() {
