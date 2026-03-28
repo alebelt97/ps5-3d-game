@@ -10,7 +10,45 @@
   <canvas id="c"></canvas>
   <div id="title">PS5 3D</div>
   <div id="crosshair"></div>
-  <div id="hud">WASD / left stick — move &nbsp;·&nbsp; right stick / arrow keys — look</div>
+
+  <!-- Top HUD bar -->
+  <div id="hud-top">
+    <div id="health-wrap">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <span class="hud-label">HP</span>
+    </div>
+    <div id="wave-info">Wave 1 · 0/6</div>
+    <div id="cooldown-wrap">
+      <svg id="cooldown-svg" width="36" height="36" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="16" fill="none"
+          stroke="rgba(255,255,255,0.15)" stroke-width="3"/>
+        <circle id="cooldown-circle" cx="20" cy="20" r="16" fill="none"
+          stroke="rgba(255,255,255,0.85)" stroke-width="3"
+          stroke-dasharray="100.53" stroke-dashoffset="0"
+          transform="rotate(-90 20 20)"/>
+      </svg>
+      <span class="hud-label">ATK</span>
+    </div>
+  </div>
+
+  <!-- Wave clear flash -->
+  <div id="wave-clear"></div>
+
+  <!-- Game over / win overlay -->
+  <div id="overlay">
+    <div class="overlay-box">
+      <h2 id="overlay-title"></h2>
+      <p id="overlay-sub"></p>
+      <p class="overlay-hint">Press R / Options to restart</p>
+    </div>
+  </div>
+
+  <!-- Damage vignette -->
+  <div id="vignette"></div>
+
+  <!-- Controls hint (bottom) -->
+  <div id="hud">WASD / left stick — move &nbsp;·&nbsp; arrows / right stick — look &nbsp;·&nbsp; Space / Cross — attack</div>
+
   <div id="err" style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(200,0,0,0.85);color:#fff;padding:10px 18px;border-radius:8px;font:700 13px sans-serif;max-width:80vw;text-align:center;"></div>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script>
