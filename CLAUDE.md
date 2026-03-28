@@ -56,3 +56,32 @@ let cameraYaw = 0;  // radians, right stick X / arrow keys
 | `SPEED` | 5 units/s | Character movement speed |
 | `CAM_SPEED` | 2 rad/s | Camera rotation speed |
 | `DEAD` | 0.12 | Gamepad stick dead zone |
+| `ATTACK_CD` | 0.6 s | Attack cooldown duration |
+| `COOLDOWN_CIRC` | 100.53 | SVG circle circumference (2π×16) for cooldown ring |
+
+### Combat state variables (`game.js`)
+| Variable | Purpose |
+|---|---|
+| `playerHealth` / `playerMaxHealth` | Current and max HP (starts 100) |
+| `attackCooldown` | Seconds remaining until attack is ready |
+| `isAttacking` / `attackSquashTimer` | Attack animation state |
+| `enemies` | Array of live enemy objects |
+| `waveNum` / `killCount` / `killTarget` | Wave progress tracking |
+| `waveActive` / `betweenWaves` / `betweenTimer` | Wave lifecycle flags |
+| `spawnQueue` / `spawnTimer` | Staggered enemy spawning |
+| `gameIsOver` / `gameWon` | Terminal game state flags |
+| `WAVE_SIZES` | `[0,6,8,11,14,18]` — enemy count per wave (waves 1–5) |
+| `prevAttackInput` | Edge-detect for attack button press |
+
+### Enemy system functions (`game.js`)
+| Function | Purpose |
+|---|---|
+| `makeEnemy(type)` | Creates a `'scout'` (orange sphere, 1HP, fast) or `'tank'` (red cube, 2HP, slow); spawns at random angle, radius 40 |
+| `updateSpawn(dt)` | Drains `spawnQueue` every 0.5 s while wave is active |
+| `startWave(n)` | Resets kill count, sets `spawnQueue` from `WAVE_SIZES[n]`, activates wave |
+| `updateEnemies(dt)` | Moves all live enemies toward player; deals damage on contact; removes `dead` enemies; controls vignette |
+
+### Enemy AI
+- **seek**: move toward player at 4.5 u/s (scout) or 2.0 u/s (tank) while `dist > 1.2`
+- **attack**: deal 8 HP/s (scout) or 20 HP/s (tank) continuously while in contact
+- `triggerGameOver()` is called when `playerHealth` reaches 0 (defined in a later task — hoisted at runtime)
