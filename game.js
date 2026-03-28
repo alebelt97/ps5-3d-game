@@ -160,10 +160,14 @@ var WAVE_SIZES = [0, 6, 8, 11, 14, 18]; // index 0 unused; wave 1–5
 var prevAttackInput  = false;
 var prevOptionsInput = false;
 
+var playerWalkTimer = 0;
+var totalTime       = 0;
+
 // ─── Enemy system ─────────────────────────────────────────────────────────────
 function makeEnemy(type) {
   var group = new THREE.Group();
   var mats  = [];
+  var legs  = [];
 
   if (type === 'scout') {
     // Goomba — round brown mushroom creature with angry brows and feet
@@ -179,6 +183,7 @@ function makeEnemy(type) {
     var gFootR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.18, 8), footMatR);
     gFootR.position.set(0.15, -0.41, 0);
     group.add(gFootR);
+    legs = [gFootL, gFootR];
 
     var gBody = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), bodyMat);
     gBody.position.set(0, 0.10, 0);
@@ -227,6 +232,7 @@ function makeEnemy(type) {
     var kLegR = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.22, 8), kLegMatR);
     kLegR.position.set(0.18, -0.39, 0);
     group.add(kLegR);
+    legs = [kLegL, kLegR];
 
     var shellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.30, 12), shellBMat);
     shellBase.position.set(0, -0.13, 0);
@@ -253,7 +259,9 @@ function makeEnemy(type) {
   var angle = Math.random() * Math.PI * 2;
   group.position.set(Math.cos(angle) * 40, 0.5, Math.sin(angle) * 40);
   scene.add(group);
-  return { type: type, mesh: group, mats: mats, health: type === 'scout' ? 1 : 2, aiState: 'seek', dead: false, shrinking: false };
+  return { type: type, mesh: group, mats: mats, legs: legs,
+           walkPhase: Math.random() * Math.PI * 2,
+           health: type === 'scout' ? 1 : 2, aiState: 'seek', dead: false, shrinking: false };
 }
 
 function updateSpawn(dt) {
@@ -305,6 +313,14 @@ function updateEnemies(dt) {
         playerHealth = 0;
         triggerGameOver();
       }
+    }
+
+    // Leg walk animation
+    if (e.legs.length) {
+      var walkSpd  = e.type === 'scout' ? 11 : 7;
+      var swing    = Math.sin(totalTime * walkSpd + e.walkPhase) * 0.45;
+      e.legs[0].rotation.x =  swing;
+      e.legs[1].rotation.x = -swing;
     }
   }
 
@@ -503,6 +519,9 @@ function restartGame() {
   capsule.position.set(0, 1.0, 0);
   capsule.rotation.y = 0;
   cameraYaw = 0;
+  playerWalkTimer = 0;
+  legL.rotation.x = 0;
+  legR.rotation.x = 0;
 
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('vignette').classList.remove('damaged');
@@ -551,7 +570,8 @@ function loop() {
     if (keys['KeyW']) mz -= 1;
     if (keys['KeyS']) mz += 1;
 
-    if (mx !== 0 || mz !== 0) {
+    var moving = (mx !== 0 || mz !== 0);
+    if (moving) {
       var len = Math.sqrt(mx * mx + mz * mz);
       var nx  = mx / len;
       var nz  = mz / len;
@@ -562,6 +582,18 @@ function loop() {
       capsule.position.x += wx * SPEED * dt;
       capsule.position.z += wz * SPEED * dt;
       capsule.rotation.y  = Math.atan2(wx, wz);
+    }
+
+    // Player leg walk animation
+    totalTime += dt;
+    if (moving) {
+      playerWalkTimer += dt;
+      var pSwing = Math.sin(playerWalkTimer * 9) * 0.45;
+      legL.rotation.x =  pSwing;
+      legR.rotation.x = -pSwing;
+    } else {
+      legL.rotation.x *= 0.75;
+      legR.rotation.x *= 0.75;
     }
 
     tryAttack(dt);
