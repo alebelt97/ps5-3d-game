@@ -236,6 +236,91 @@ function updateEnemies(dt) {
   });
 }
 
+// ─── Attack system ────────────────────────────────────────────────────────────
+function flashEnemy(e) {
+  var origHex = e.type === 'scout' ? 0xff8c00 : 0xcc2222;
+  e.mesh.material.color.setHex(0xffffff);
+  setTimeout(function() {
+    if (!e.dead) e.mesh.material.color.setHex(origHex);
+  }, 80);
+}
+
+function killEnemy(e) {
+  e.dead = true;
+  var mesh      = e.mesh;
+  var startTime = Date.now();
+  var duration  = 150;
+  function shrink() {
+    var t = Math.min((Date.now() - startTime) / duration, 1);
+    var s = 1 - t;
+    mesh.scale.set(s, s, s);
+    if (t < 1) { requestAnimationFrame(shrink); }
+    else        { scene.remove(mesh); }
+  }
+  requestAnimationFrame(shrink);
+
+  killCount++;
+  if (waveActive && killCount >= killTarget) {
+    completeWave();
+  }
+}
+
+function hitEnemy(e) {
+  e.health--;
+  if (e.health <= 0) { killEnemy(e); }
+  else               { flashEnemy(e); }
+}
+
+function performAttack() {
+  attackCooldown    = ATTACK_CD;
+  isAttacking       = true;
+  attackSquashTimer = 0.15;
+  capsule.scale.x   = 1.3;
+
+  // Hitbox centre: 1.5 units in front of player
+  var fwdX = Math.sin(capsule.rotation.y);
+  var fwdZ = Math.cos(capsule.rotation.y);
+  var hx   = capsule.position.x + fwdX * 1.5;
+  var hz   = capsule.position.z + fwdZ * 1.5;
+  var HIT_R = 2.5;
+
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (e.dead) continue;
+    var dx   = e.mesh.position.x - hx;
+    var dz   = e.mesh.position.z - hz;
+    var dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist <= HIT_R) { hitEnemy(e); }
+  }
+}
+
+function tryAttack(dt) {
+  // Tick cooldown
+  if (attackCooldown > 0) attackCooldown -= dt;
+  if (attackCooldown < 0) attackCooldown = 0;
+
+  // Tick squash
+  if (isAttacking) {
+    attackSquashTimer -= dt;
+    if (attackSquashTimer <= 0) {
+      isAttacking     = false;
+      capsule.scale.x = 1.0;
+    }
+  }
+
+  // Check input (edge trigger — fires once per press)
+  var gp        = null;
+  var gamepads  = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (var i = 0; i < gamepads.length; i++) { if (gamepads[i]) { gp = gamepads[i]; break; } }
+  var gpAttack  = gp && gp.buttons && gp.buttons[0] && gp.buttons[0].pressed;
+  var attacking = keys['Space'] || gpAttack;
+
+  if (attacking && !prevAttackInput && attackCooldown === 0 && !gameIsOver && !gameWon) {
+    performAttack();
+  }
+  prevAttackInput = attacking;
+}
+
 function loop() {
   requestAnimationFrame(loop);
 
