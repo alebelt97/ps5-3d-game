@@ -247,6 +247,7 @@ function flashEnemy(e) {
 }
 
 function killEnemy(e) {
+  if (e.dead) return;
   e.dead = true;
   var mesh      = e.mesh;
   var startTime = Date.now();
@@ -260,9 +261,11 @@ function killEnemy(e) {
   }
   requestAnimationFrame(shrink);
 
-  killCount++;
-  if (waveActive && killCount >= killTarget) {
-    completeWave();
+  if (waveActive) {
+    killCount++;
+    if (killCount >= killTarget) {
+      completeWave();
+    }
   }
 }
 
