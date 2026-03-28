@@ -192,6 +192,47 @@ function startWave(n) {
   document.getElementById('health-fill').classList.remove('regen');
 }
 
+function updateEnemies(dt) {
+  var px = capsule.position.x;
+  var pz = capsule.position.z;
+  var takingDamage = false;
+
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (e.dead) continue;
+
+    var dx   = px - e.mesh.position.x;
+    var dz   = pz - e.mesh.position.z;
+    var dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist > 1.2) {
+      e.aiState = 'seek';
+      var spd = e.type === 'scout' ? 4.5 : 2.0;
+      e.mesh.position.x += (dx / dist) * spd * dt;
+      e.mesh.position.z += (dz / dist) * spd * dt;
+    } else {
+      e.aiState = 'attack';
+      var dmg = e.type === 'scout' ? 8 : 20;
+      playerHealth -= dmg * dt;
+      takingDamage = true;
+      if (playerHealth <= 0 && !gameIsOver && !gameWon) {
+        playerHealth = 0;
+        triggerGameOver();
+      }
+    }
+  }
+
+  // Vignette: on while taking damage, fade out when not
+  if (takingDamage) {
+    document.getElementById('vignette').classList.add('damaged');
+  } else {
+    document.getElementById('vignette').classList.remove('damaged');
+  }
+
+  // Clean up dead enemies
+  enemies = enemies.filter(function(e) { return !e.dead; });
+}
+
 function loop() {
   requestAnimationFrame(loop);
 
